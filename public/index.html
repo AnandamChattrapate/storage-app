@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Global Name Storage</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body>
+    <h1>🌍 Global Name Storage</h1>
+    <p><em>Store and retrieve names from anywhere in the world!</em></p>
+    
+    <!-- Store Name Section -->
+    <h2>📝 Store Your Name</h2>
+    <form id="storeForm">
+        <label>Choose a unique ID number: </label>
+        <input type="number" id="storeId" required min="1" max="999999" placeholder="e.g., 12345">
+        <br><br>
+        <label>Your Name: </label>
+        <input type="text" id="storeName" required maxlength="100" placeholder="Enter your name">
+        <br><br>
+        <button type="submit">🚀 Store Name Globally</button>
+    </form>
+    <div id="storeMessage"></div>
+    <br><hr><br>
+
+    <!-- Get Name Section -->
+    <h2>🔍 Find Someone's Name</h2>
+    <form id="getForm">
+        <label>Enter ID to search: </label>
+        <input type="number" id="getId" required min="1" placeholder="e.g., 12345">
+        <br><br>
+        <button type="submit">🔎 Search Name</button>
+    </form>
+    <div id="getResult"></div>
+    <br><hr><br>
+
+    <!-- Show All Data -->
+    <h2>📋 View All Stored Names</h2>
+    <button onclick="showAllData()">📊 Show All Names</button>
+    <div id="allData"></div>
+    <br>
+
+    <!-- Instructions -->
+    <h3>ℹ️ How to use:</h3>
+    <ul>
+        <li><strong>Store:</strong> Pick any number as your ID and enter your name</li>
+        <li><strong>Share:</strong> Tell friends your ID number so they can find your name</li>
+        <li><strong>Global:</strong> This works from anywhere in the world with internet!</li>
+    </ul>
+
+    <script>
+        // Auto-detect if running locally or on deployed server
+        const API_BASE = window.location.origin + '/api';
+        
+        console.log('🌐 API Base URL:', API_BASE);
+
+        // Store name function
+        document.getElementById('storeForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const submitBtn = e.target.querySelector('button');
+            const originalText = submitBtn.textContent;
+            submitBtn.textContent = '⏳ Storing...';
+            submitBtn.disabled = true;
+            
+            let id = document.getElementById('storeId').value;
+            let name = document.getElementById('storeName').value.trim();
+            
+            try {
+                const response = await fetch(`${API_BASE}/store`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ id: parseInt(id), name: name })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    document.getElementById('storeMessage').innerHTML = 
+                        `<div style="background: #d4edda; color: #155724; padding: 10px; border-radius: 5px; margin: 10px 0;">
+                            ✅ <strong>Success!</strong> Your name is now stored globally!<br>
+                            📍 <strong>Your ID:</strong> ${id}<br>
+                            👤 <strong>Name:</strong> ${name}<br>
+                            🌍 <em>Anyone can now find your name using ID: ${id}</em>
+                        </div>`;
+                    document.getElementById('storeForm').reset();
+                } else {
+                    document.getElementById('storeMessage').innerHTML = 
+                        `<div style="background: #f8d7da; color: #721c24; padding: 10px; border-radius: 5px; margin: 10px 0;">
+                            ❌ <strong>Error:</strong> ${data.error || 'Failed to store name'}
+                        </div>`;
+                }
+            } catch (error) {
+                document.getElementById('storeMessage').innerHTML = 
+                    `<div style="background: #f8d7da; color: #721c24; padding: 10px; border-radius: 5px; margin: 10px 0;">
+                        ❌ <strong>Connection Error:</strong> Could not connect to server. Try again later.
+                    </div>`;
+                console.error('Error:', error);
+            }
+            
+            submitBtn.textContent = originalText;
+            submitBtn.disabled = false;
+        });
+
+        // Get name function
+        document.getElementById('getForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const submitBtn = e.target.querySelector('button');
+            const originalText = submitBtn.textContent;
+            submitBtn.textContent = '⏳ Searching...';
+            submitBtn.disabled = true;
+            
+            let id = document.getElementById('getId').value;
+            
+            try {
+                const response = await fetch(`${API_BASE}/get/${id}`);
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    const date = new Date(data.created_at).toLocaleString();
+                    document.getElementById('getResult').innerHTML = 
+                        `<div style="background: #cce7ff; color: #004085; padding: 15px; border-radius: 5px; margin: 10px 0;">
+                            🎉 <strong>Found!</strong><br>
+                            📍 <strong>ID:</strong> ${data.id}<br>
+                            👤 <strong>Name:</strong> ${data.name}<br>
+                            📅 <strong>Stored on:</strong> ${date}
+                        </div>`;
+                } else {
+                    document.getElementById('getResult').innerHTML = 
+                        `<div style="background: #fff3cd; color: #856404; padding: 10px; border-radius: 5px; margin: 10px 0;">
+                            😔 <strong>Not Found:</strong> No name stored for ID ${id}
+                        </div>`;
+                }
+            } catch (error) {
+                document.getElementById('getResult').innerHTML = 
+                    `<div style="background: #f8d7da; color: #721c24; padding: 10px; border-radius: 5px; margin: 10px 0;">
+                        ❌ <strong>Connection Error:</strong> Could not connect to server.
+                    </div>`;
+                console.error('Error:', error);
+            }
+            
+            submitBtn.textContent = originalText;
+            submitBtn.disabled = false;
+        });
+
+        // Show all data
+        async function showAllData() {
+            const resultDiv = document.getElementById('allData');
+            resultDiv.innerHTML = '<p>⏳ Loading all names...</p>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/all`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    let html = `<div style="background: #e2f3ff; padding: 15px; border-radius: 5px; margin: 10px 0;">
+                        <h4>📊 Database Contents (${result.count} entries):</h4>`;
+                    
+                    if (result.data.length === 0) {
+                        html += '<p><em>No names stored yet. Be the first!</em></p>';
+                    } else {
+                        html += '<table border="1" style="width: 100%; border-collapse: collapse; margin-top: 10px;">';
+                        html += '<tr style="background: #007bff; color: white;"><th>ID</th><th>Name</th><th>Stored Date</th></tr>';
+                        
+                        result.data.forEach(row => {
+                            const date = new Date(row.created_at).toLocaleDateString();
+                            html += `<tr>
+                                <td style="padding: 8px; text-align: center;"><strong>${row.id}</strong></td>
+                                <td style="padding: 8px;">${row.name}</td>
+                                <td style="padding: 8px; text-align: center;">${date}</td>
+                            </tr>`;
+                        });
+                        html += '</table>';
+                    }
+                    html += '</div>';
+                    resultDiv.innerHTML = html;
+                } else {
+                    resultDiv.innerHTML = '<p style="color: red;">❌ Failed to load data</p>';
+                }
+                
+            } catch (error) {
+                resultDiv.innerHTML = '<p style="color: red;">❌ Connection error</p>';
+                console.error('Error:', error);
+            }
+        }
+
+        // Show current URL for sharing
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🌍 Your app is running at:', window.location.href);
+            console.log('📱 Share this URL with anyone to let them access your app!');
+        });
+    </script>
+</body>
+</html>
